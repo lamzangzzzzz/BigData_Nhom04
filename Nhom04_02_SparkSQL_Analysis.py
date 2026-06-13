@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-# 1. KHOI TAO SPARKSESSION
+# KHOI TAO SPARKSESSION
 spark = SparkSession.builder \
     .appName("Nhom04_SQL_Cau20_AgeGroup_IGTime") \
     .config("spark.executor.memory", "4g") \
@@ -9,7 +9,7 @@ spark = SparkSession.builder \
 
 spark.sparkContext.setLogLevel("WARN")
 
-# 2. DOC DU LIEU SACH TU HDFS
+# DOC DU LIEU SACH TU HDFS
 INPUT_HDFS_PATH = "hdfs://26.142.182.248:9000/BigData_Nhom04/instagram_cleaned"
 
 print("\n[INIT] Dang doc du lieu sach tu HDFS...")
@@ -20,7 +20,7 @@ df.cache()
 total_rows = df.count()
 print(f"[INIT] Tong ban ghi: {total_rows:,} | So cot: {len(df.columns)}")
 
-# 3. TAO TEMPVIEW
+# TAO TEMPVIEW
 df.createOrReplaceTempView("instagram_cleaned_view")
 print("[INIT] Da tao TempView: 'instagram_cleaned_view' | Cache: ON\n")
 
