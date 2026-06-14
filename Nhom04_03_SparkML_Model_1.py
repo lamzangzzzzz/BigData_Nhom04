@@ -21,9 +21,8 @@ warnings.filterwarnings('ignore')
 
 
 if __name__ == '__main__':
-   # =========================================================================
+
    # 1. KHỞI TẠO SPARKSESSION (CẤU HÌNH CLUSTER PHÂN TÁN)
-   # =========================================================================R
    print("--- Bước 1: Đang khởi tạo Apache Spark Session ---")
    spark = SparkSession.builder \
        .appName("Nhom04_KMeans_Clustering") \
@@ -44,10 +43,7 @@ if __name__ == '__main__':
    spark.sparkContext.setLogLevel("WARN")
    print("Đã khởi tạo SparkSession phân tán thành công\n")
 
-
-   # =========================================================================
    # 2. NẠP DỮ LIỆU TỪ HDFS
-   # =========================================================================
    INPUT_HDFS_PATH = "hdfs://26.142.182.248:9000/BigData_Nhom04/instagram_cleaned"
    print(f"--- Bước 2: Đang đọc dữ liệu sạch từ HDFS: {INPUT_HDFS_PATH} ---")
 
@@ -76,18 +72,14 @@ if __name__ == '__main__':
    print(f"Đã nạp dữ liệu thành công. Tổng số bản ghi: {total_rows:,} | Số cột: {len(df.columns)}")
 
 
-   # =========================================================================
    # 3. XỬ LÝ MISSING VALUE
-   # =========================================================================
    print("--- Bước 3: Điền giá trị khuyết ---")
    mean_dict = df.select([mean(c).alias(c) for c in raw_numeric_cols]).first().asDict()
    df = df.na.fill(mean_dict)
    print("Xử lý khuyết thiếu hoàn tất.")
 
 
-   # =========================================================================
    # 4. FEATURE ENGINEERING
-   # =========================================================================
    print("\n--- Bước 4: Thực hiện Feature Engineering ---")
 
 
@@ -125,10 +117,7 @@ if __name__ == '__main__':
    df.cache()
    print(f"Hoàn thành trích xuất {len(feature_list)} đặc trưng thông minh.")
 
-
-   # =========================================================================
    # 5. XÁC ĐỊNH K TỐI ƯU BẰNG ELBOW METHOD
-   # =========================================================================
    print("\n--- Bước 5: Tìm K tối ưu bằng Elbow Method ---")
    inertia_scores = []
    k_range = range(2, 7)
@@ -169,10 +158,7 @@ if __name__ == '__main__':
    plt.close()
    print("Đã lưu đồ thị Elbow: 'elbow_method.png'")
 
-
-   # =========================================================================
    # 6. HUẤN LUYỆN PIPELINE CHÍNH THỨC VỚI K CỐ ĐỊNH
-   # =========================================================================
    NUM_CLUSTERS = 4
    print(f"\n--- Bước 6: Huấn luyện Pipeline chính thức với K = {NUM_CLUSTERS} ---")
 
@@ -192,9 +178,7 @@ if __name__ == '__main__':
    df_clustered.groupBy("Cluster").count().orderBy("Cluster").show()
 
 
-   # =========================================================================
    # 7. TRỰC QUAN HÓA KẾT QUẢ PHÂN CỤM (PCA & Radar Chart)
-   # =========================================================================
    print("\n--- Bước 7: Trực quan hóa kết quả phân cụm ---")
 
 

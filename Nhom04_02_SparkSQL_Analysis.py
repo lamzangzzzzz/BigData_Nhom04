@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 # KHOI TAO SPARKSESSION
 spark = SparkSession.builder \
-    .appName("Nhom04_SQL_Cau20_AgeGroup_IGTime") \
+    .appName("Nhom04_SparkSQL") \
     .config("spark.executor.memory", "4g") \
     .config("spark.driver.memory", "2g") \
     .config("spark.sql.shuffle.partitions", "100") \
@@ -25,7 +25,6 @@ df.createOrReplaceTempView("instagram_cleaned_view")
 print("[INIT] Da tao TempView: 'instagram_cleaned_view' | Cache: ON\n")
 
 print("  CAU 1")
-
 
 spark.sql("""
   SELECT
@@ -60,7 +59,6 @@ spark.sql("""
 
 
 print("  CAU 2")
-
 
 spark.sql("""
   WITH session_groups AS (
@@ -110,11 +108,7 @@ spark.sql("""
   ORDER BY session_habit
 """).show(truncate=False)
 
-
-
-
 print("  CAU 3")
-
 
 spark.sql("""
   WITH privacy_stats AS (
@@ -344,8 +338,6 @@ spark.sql("""
     ORDER BY exercise_level, ig_usage_level
 """).show(20, truncate=False)
 
-print("[DONE] Cau 7 hoan thanh!\n")
-
 print("  CAU 8")
 
 spark.sql("""
@@ -403,8 +395,6 @@ spark.sql("""
     ORDER BY diem_bat_thuong_tb DESC
 """).show(10, truncate=False)
 
-print("[DONE] Cau 8 hoan thanh!\n")
-
 print("  CAU 9")
 
 spark.sql("""
@@ -445,12 +435,7 @@ spark.sql("""
    ORDER BY age_group, ranking
 """).show(60, truncate=False)
 
-print("[DONE] Cau 9 hoan thanh!\n")
-
 print("  CAU 10")
-
-
-print("[DONE] Cau 10 hoan thanh!\n")
 
 spark.sql("""
     SELECT
