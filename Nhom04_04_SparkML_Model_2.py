@@ -5,14 +5,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
 
-
 # Khởi tạo các thư viện core của PySpark
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, mean
 from pyspark.sql.functions import min as spark_min, max as spark_max
 from pyspark.ml.feature import VectorAssembler, StringIndexer, OneHotEncoder, StandardScaler
 from pyspark.ml import Pipeline
-
 
 # Các thuật toán Hồi quy
 from pyspark.ml.regression import LinearRegression
@@ -21,7 +19,6 @@ from lightgbm import LGBMRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import Ridge, Lasso
 
-
 # Thư viện giải thích mô hình
 import shap
 
@@ -29,7 +26,6 @@ import shap
 # Cấu hình giao diện đồ thị
 plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
 warnings.filterwarnings('ignore')
-
 
 if __name__ == '__main__':
 
@@ -57,7 +53,6 @@ if __name__ == '__main__':
    print(f"--- Bước 2: Đang nạp dữ liệu sạch từ HDFS: {INPUT_HDFS_PATH} ---")
    df = spark.read.csv(INPUT_HDFS_PATH, header=True, inferSchema=False)
 
-
    input_numeric_cols = [
        'daily_active_minutes_instagram', 'sessions_per_day', 'time_on_reels_per_day',
        'notification_response_rate', 'sleep_hours_per_night', 'exercise_hours_per_week',
@@ -74,6 +69,7 @@ if __name__ == '__main__':
    total_rows = df.count()
    print(f" Đã nạp thành công! Tổng số bản ghi: {total_rows:,}  | Số cột:  {len(df.columns)}")
 
+   # =========================================================================
    # 3. EDA & HEATMAP TƯƠNG QUAN (Trực quan hóa trên mẫu ban đầu)
    print("\n--- Bước 3: Đang thực hiện phân tích EDA và vẽ Heatmap tương quan... ---")
    sample_ratio = min(10000.0 / total_rows, 1.0)
@@ -81,26 +77,27 @@ if __name__ == '__main__':
        .sample(False, sample_ratio, seed=42) \
        .toPandas()
 
-
    plt.figure(figsize=(8, 4))
    sns.histplot(eda_sample_pd[target_col], kde=True, color='#E1306C')
    plt.title('Biểu đồ phân phối của biến mục tiêu: Perceived Stress Score')
    plt.xlabel('Điểm số Stress (0 - 40)')
    plt.ylabel('Tần suất')
    plt.tight_layout()
-   plt.savefig("eda_stress_distribution.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/eda_stress_distribution.png", dpi=150, bbox_inches="tight")
    plt.show()
-
 
    plt.figure(figsize=(12, 10))
    corr_matrix = eda_sample_pd.corr()
    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", square=True)
    plt.title('Ma trận tương quan Heatmap hệ số Pearson')
    plt.tight_layout()
-   plt.savefig("eda_heatmap.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/eda_heatmap.png", dpi=150, bbox_inches="tight")
    plt.show()
    print(" Đã lưu biểu đồ EDA thành công.")
 
+   # =========================================================================
+   # 4. CHIA DỮ LIỆU TRAIN/TEST
+   # =========================================================================
    # 4. CHIA DỮ LIỆU TRAIN/TEST (Tránh Data Leakage)
    print("\n--- Bước 4: Đang phân tách dữ liệu Train/Test... ---")
    train_data, test_data = df.randomSplit([0.7, 0.3], seed=42)
@@ -113,14 +110,11 @@ if __name__ == '__main__':
    train_data = train_data.na.fill(mean_dict)
    test_data = test_data.na.fill(mean_dict)
 
-
    # 5.2. Tính min/max cho chuẩn hóa nội bộ (Chỉ lấy từ TẬP TRAIN)
    bmi_stats = train_data.select(spark_min('body_mass_index').alias('min'),
                                  spark_max('body_mass_index').alias('max')).first()
    bp_stats = train_data.select(spark_min('blood_pressure_systolic').alias('min'),
                                 spark_max('blood_pressure_systolic').alias('max')).first()
-
-
 
 
    def apply_feature_engineering(dataframe):
@@ -135,12 +129,8 @@ if __name__ == '__main__':
        df_fe = df_fe.withColumn('health_composite', (bmi_scaled + bp_scaled) / 2)
        return df_fe
 
-
-
-
    train_data = apply_feature_engineering(train_data)
    test_data = apply_feature_engineering(test_data)
-
 
    engineered_numeric_cols = [
        'daily_active_minutes_instagram', 'sessions_per_day', 'time_on_reels_per_day',
@@ -149,6 +139,7 @@ if __name__ == '__main__':
    ]
    print(f" Đã tạo thành công các biến FE và Imputation an toàn.")
 
+   # =========================================================================
    # 6. PIPELINE MÃ HÓA BIẾN CHỮ & CHUẨN HÓA DỮ LIỆU TOÀN DIỆN
    print("\n--- Bước 6: Thiết lập Pipeline mã hóa và Standard Scaler... ---")
    stages = []
@@ -161,27 +152,23 @@ if __name__ == '__main__':
        stages += [indexer, encoder]
        encoded_categorical_cols.append(col_name + "_vec")
 
-
    assembler_inputs = engineered_numeric_cols + encoded_categorical_cols
    assembler = VectorAssembler(inputCols=assembler_inputs, outputCol="raw_features")
    stages.append(assembler)
 
-
    scaler = StandardScaler(inputCol="raw_features", outputCol="features", withStd=True, withMean=False)
    stages.append(scaler)
 
-
    pipeline = Pipeline(stages=stages)
    pipeline_model = pipeline.fit(train_data)
-
 
    train_transformed = pipeline_model.transform(train_data)
    test_transformed = pipeline_model.transform(test_data)
    print(" Hoàn thành trích xuất và chuẩn hóa đặc trưng thông minh.")
 
+   # =========================================================================
    # 7. ĐÀO TẠO 7 THUẬT TOÁN HỒI QUY
    print("\n --- Bước 7: Tiến hành huấn luyện 7 thuật toán Hồi quy riêng lẻ... ---")
-
 
    # Thuật toán 1: Linear Regression (Spark phân tán)
    print("    [1/7] Đang huấn luyện: Linear Regression (Spark)...")
@@ -189,16 +176,15 @@ if __name__ == '__main__':
    lr_model = lr.fit(train_transformed)
    lr_preds = lr_model.transform(test_transformed)
 
+   # Lấy mẫu về Pandas cho 6 thuật toán còn lại CÙNG LÚC với kết quả dự đoán của Spark
    print("    Đang chiết xuất mẫu dữ liệu an toàn cho các mô hình đơn lẻ...")
    sample_fraction = min(50000.0 / total_rows, 0.2)
-
 
    train_pd = train_transformed.select(engineered_numeric_cols + [target_col]) \
        .sample(False, sample_fraction, seed=42).toPandas()
 
    test_pd = lr_preds.select(engineered_numeric_cols + [target_col, "prediction"]) \
        .sample(False, sample_fraction, seed=42).toPandas()
-
 
    X_train = train_pd[engineered_numeric_cols]
    y_train = train_pd[target_col]
@@ -319,7 +305,7 @@ if __name__ == '__main__':
    plt.suptitle('Bảng so sánh hiệu suất 7 mô hình Hồi quy dự đoán Stress Score (Tỷ lệ 7:3)',
                 fontsize=14, fontweight='bold')
    plt.tight_layout()
-   plt.savefig("model_comparison.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/model_comparison.png", dpi=150, bbox_inches="tight")
    plt.show()
    print(" Đã lưu biểu đồ so sánh mô hình.")
 
@@ -339,7 +325,7 @@ if __name__ == '__main__':
    shap.summary_plot(shap_values, shap_sample, feature_names=engineered_numeric_cols,
                      plot_type="bar", show=False)
    plt.tight_layout()
-   plt.savefig("shap_bar.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/shap_bar.png", dpi=150, bbox_inches="tight")
    plt.show()
 
 
@@ -347,7 +333,7 @@ if __name__ == '__main__':
    plt.title("SHAP Beeswarm: Chiều hướng tác động của các tính năng lên điểm Stress")
    shap.summary_plot(shap_values, shap_sample, feature_names=engineered_numeric_cols, show=False)
    plt.tight_layout()
-   plt.savefig("shap_beeswarm.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/shap_beeswarm.png", dpi=150, bbox_inches="tight")
    plt.show()
    print(" Đã lưu biểu đồ SHAP.")
 
