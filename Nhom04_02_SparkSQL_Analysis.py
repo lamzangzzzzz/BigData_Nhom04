@@ -155,6 +155,150 @@ spark.sql("""
   ORDER BY privacy_setting_level, gender
 """).show(20, truncate=False)
 
+print("  CAU 4")
+
+spark.sql("""
+   WITH rfm_base AS (
+       SELECT
+           CASE
+               WHEN sessions_per_day >= 5 AND user_engagement_score >= 1.8
+                   THEN '1. Champions       (Trung thanh + Nang no)'
+               WHEN sessions_per_day >= 5 AND user_engagement_score < 1.8
+                   THEN '2. Browsers        (Vao nhieu - It tuong tac)'
+               WHEN sessions_per_day < 5  AND user_engagement_score >= 1.8
+                   THEN '3. Quality Engagers(It vao - Chat luong cao)'
+               ELSE    '4. At Risk          (Nguy co roi bo App)'
+           END                                           AS user_segment,
+           gender,
+           daily_active_minutes_instagram,
+           sessions_per_day,
+           user_engagement_score,
+           ads_clicked_per_day,
+           ads_viewed_per_day,
+           posts_created_per_week,
+           followers_count,
+           self_reported_happiness
+       FROM instagram_cleaned_view
+   ),
+   rfm_agg AS (
+       SELECT
+           user_segment,
+           COUNT(*)                                          AS total_users,
+           ROUND(AVG(daily_active_minutes_instagram), 1)    AS avg_minutes_spent,
+           ROUND(AVG(sessions_per_day), 2)                  AS avg_sessions,
+           ROUND(AVG(user_engagement_score), 4)             AS avg_engagement,
+           ROUND(AVG(ads_clicked_per_day), 2)               AS avg_ads_clicked,
+           ROUND(
+               AVG(ads_clicked_per_day) * 100.0
+               / NULLIF(AVG(ads_viewed_per_day), 0)
+           , 2)                                             AS ads_ctr_pct,
+           ROUND(AVG(posts_created_per_week), 2)            AS avg_posts_week,
+           ROUND(AVG(followers_count), 0)                   AS avg_followers,
+           ROUND(AVG(self_reported_happiness), 2)           AS avg_happiness
+       FROM rfm_base
+       GROUP BY user_segment
+   )
+   SELECT
+       user_segment,
+       total_users,
+       ROUND(total_users * 100.0 / SUM(total_users) OVER (), 2) AS pct_of_total,
+       avg_minutes_spent,
+       avg_sessions,
+       avg_engagement,
+       avg_ads_clicked,
+       ads_ctr_pct,
+       avg_posts_week,
+       avg_followers,
+       avg_happiness,
+       RANK() OVER (ORDER BY avg_ads_clicked DESC)              AS ads_value_rank
+   FROM rfm_agg
+   ORDER BY user_segment
+""").show(truncate=False)
+
+print("  CAU 5")
+
+spark.sql("""
+   SELECT
+       income_level,
+       employment_status,
+       preferred_content_theme,
+       total_users,
+       avg_ads_clicked,
+       avg_time_online_mins,
+       ROUND(avg_ads_clicked / NULLIF(avg_time_online_mins / 60.0, 0), 3) AS ads_click_per_hour,
+       avg_engagement,
+       avg_followers,
+       RANK() OVER (ORDER BY
+           avg_ads_clicked / NULLIF(avg_time_online_mins / 60.0, 0) DESC
+       )                                                                   AS targeting_rank
+   FROM (
+       SELECT
+           income_level,
+           employment_status,
+           preferred_content_theme,
+           COUNT(*)                                          AS total_users,
+           ROUND(AVG(ads_clicked_per_day), 3)               AS avg_ads_clicked,
+           ROUND(AVG(daily_active_minutes_instagram), 2)    AS avg_time_online_mins,
+           ROUND(AVG(user_engagement_score), 4)             AS avg_engagement,
+           ROUND(AVG(followers_count), 0)                   AS avg_followers
+       FROM instagram_cleaned_view
+       GROUP BY income_level, employment_status, preferred_content_theme
+       HAVING COUNT(*) > 500
+   ) ads_subquery
+   ORDER BY ads_click_per_hour DESC
+   LIMIT 10
+""").show(truncate=False)
+
+print("  CAU 6")
+
+spark.sql("""
+   WITH freemium_base AS (
+       SELECT
+           subscription_status,
+           CASE
+               WHEN notification_response_rate > 0.7  THEN '1. High Response   (>70%)'
+               WHEN notification_response_rate >= 0.3 THEN '2. Medium Response (30-70%)'
+               ELSE                                        '3. Low Response    (<30%)'
+           END                                           AS notif_responsiveness,
+           linked_accounts_count,
+           user_engagement_score,
+           daily_active_minutes_instagram,
+           sessions_per_day,
+           uses_premium_features,
+           notification_response_rate
+       FROM instagram_cleaned_view
+   ),
+   freemium_agg AS (
+       SELECT
+           subscription_status,
+           notif_responsiveness,
+           COUNT(*)                                          AS user_count,
+           ROUND(AVG(linked_accounts_count), 2)             AS avg_linked_accounts,
+           ROUND(AVG(user_engagement_score), 4)             AS avg_engagement,
+           ROUND(AVG(daily_active_minutes_instagram), 1)    AS avg_ig_minutes,
+           ROUND(AVG(sessions_per_day), 2)                  AS avg_sessions,
+           ROUND(AVG(notification_response_rate) * 100, 1)  AS avg_notif_rate_pct
+       FROM freemium_base
+       GROUP BY subscription_status, notif_responsiveness
+   )
+   SELECT
+       subscription_status,
+       notif_responsiveness,
+       user_count,
+       ROUND(user_count * 100.0
+           / SUM(user_count) OVER (PARTITION BY subscription_status), 2) AS pct_in_plan,
+       avg_linked_accounts,
+       avg_engagement,
+       avg_ig_minutes,
+       avg_sessions,
+       avg_notif_rate_pct,
+       ROW_NUMBER() OVER (
+           PARTITION BY subscription_status
+           ORDER BY avg_engagement DESC
+       )                                                                  AS engage_rank_in_plan
+   FROM freemium_agg
+   ORDER BY subscription_status, notif_responsiveness
+""").show(20, truncate=False)
 
 print("  CAU 7")
 
