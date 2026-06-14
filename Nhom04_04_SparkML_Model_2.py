@@ -98,7 +98,7 @@ if __name__ == '__main__':
    plt.xlabel('Điểm số Stress (0 - 40)')
    plt.ylabel('Tần suất')
    plt.tight_layout()
-   plt.savefig("eda_stress_distribution.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/eda_stress_distribution.png", dpi=150, bbox_inches="tight")
    plt.show()
 
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", square=True)
    plt.title('Ma trận tương quan Heatmap hệ số Pearson')
    plt.tight_layout()
-   plt.savefig("eda_heatmap.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/eda_heatmap.png", dpi=150, bbox_inches="tight")
    plt.show()
    print(" Đã lưu biểu đồ EDA thành công.")
 
@@ -352,7 +352,7 @@ if __name__ == '__main__':
    plt.suptitle('Bảng so sánh hiệu suất 7 mô hình Hồi quy dự đoán Stress Score (Tỷ lệ 7:3)',
                 fontsize=14, fontweight='bold')
    plt.tight_layout()
-   plt.savefig("model_comparison.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/model_comparison.png", dpi=150, bbox_inches="tight")
    plt.show()
    print(" Đã lưu biểu đồ so sánh mô hình.")
 
@@ -374,7 +374,7 @@ if __name__ == '__main__':
    shap.summary_plot(shap_values, shap_sample, feature_names=engineered_numeric_cols,
                      plot_type="bar", show=False)
    plt.tight_layout()
-   plt.savefig("shap_bar.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/shap_bar.png", dpi=150, bbox_inches="tight")
    plt.show()
 
 
@@ -382,7 +382,7 @@ if __name__ == '__main__':
    plt.title("SHAP Beeswarm: Chiều hướng tác động của các tính năng lên điểm Stress")
    shap.summary_plot(shap_values, shap_sample, feature_names=engineered_numeric_cols, show=False)
    plt.tight_layout()
-   plt.savefig("shap_beeswarm.png", dpi=150, bbox_inches="tight")
+   plt.savefig("Images/shap_beeswarm.png", dpi=150, bbox_inches="tight")
    plt.show()
    print(" Đã lưu biểu đồ SHAP.")
 
