@@ -24,6 +24,138 @@ print(f"[INIT] Tong ban ghi: {total_rows:,} | So cot: {len(df.columns)}")
 df.createOrReplaceTempView("instagram_cleaned_view")
 print("[INIT] Da tao TempView: 'instagram_cleaned_view' | Cache: ON\n")
 
+print("  CAU 1")
+
+
+spark.sql("""
+  SELECT
+      CASE
+          WHEN posts_created_per_week = 0 AND reels_watched_per_day > 10
+              THEN '1. Pure Lurker   (Chi xem)'
+          WHEN posts_created_per_week > 3 AND reels_watched_per_day < 5
+              THEN '2. Active Creator (Cham post)'
+          ELSE    '3. Casual User    (Binh thuong)'
+      END                                       AS user_persona,
+      gender,
+      COUNT(*)                                  AS total_users,
+      ROUND(AVG(followers_count), 0)            AS avg_followers,
+      ROUND(AVG(following_count), 0)            AS avg_following,
+      ROUND(AVG(likes_given_per_day), 1)        AS avg_likes_given,
+      ROUND(AVG(reels_watched_per_day), 1)      AS avg_reels_watched,
+      ROUND(AVG(posts_created_per_week), 2)     AS avg_posts_week,
+      ROUND(AVG(self_reported_happiness), 2)    AS avg_happiness,
+      ROUND(AVG(user_engagement_score), 4)      AS avg_engagement
+  FROM instagram_cleaned_view
+  GROUP BY
+      CASE
+          WHEN posts_created_per_week = 0 AND reels_watched_per_day > 10
+              THEN '1. Pure Lurker   (Chi xem)'
+          WHEN posts_created_per_week > 3 AND reels_watched_per_day < 5
+              THEN '2. Active Creator (Cham post)'
+          ELSE    '3. Casual User    (Binh thuong)'
+      END,
+      gender
+  ORDER BY user_persona, total_users DESC
+""").show(20, truncate=False)
+
+
+print("  CAU 2")
+
+
+spark.sql("""
+  WITH session_groups AS (
+      SELECT
+          CASE
+              WHEN average_session_length_minutes < 15
+                  THEN '1. Short Sessions  (<15 min)'
+              WHEN average_session_length_minutes BETWEEN 15 AND 45
+                  THEN '2. Medium Sessions (15-45 min)'
+              ELSE    '3. Doomscrolling   (>45 min)'
+          END                                           AS session_habit,
+          daily_steps_count,
+          exercise_hours_per_week,
+          blood_pressure_systolic,
+          blood_pressure_diastolic,
+          sleep_hours_per_night,
+          perceived_stress_score,
+          daily_active_minutes_instagram
+      FROM instagram_cleaned_view
+  ),
+  aggregated AS (
+      SELECT
+          session_habit,
+          COUNT(*)                                          AS user_count,
+          ROUND(AVG(daily_steps_count), 0)                 AS avg_daily_steps,
+          ROUND(AVG(exercise_hours_per_week), 2)           AS avg_exercise_hours,
+          ROUND(AVG(blood_pressure_systolic), 1)           AS avg_bp_systolic,
+          ROUND(AVG(blood_pressure_diastolic), 1)          AS avg_bp_diastolic,
+          ROUND(AVG(sleep_hours_per_night), 2)             AS avg_sleep_hours,
+          ROUND(AVG(perceived_stress_score), 2)            AS avg_stress_score,
+          ROUND(AVG(daily_active_minutes_instagram), 1)    AS avg_ig_minutes_day
+      FROM session_groups
+      GROUP BY session_habit
+  )
+  SELECT
+      session_habit,
+      user_count,
+      avg_daily_steps,
+      RANK() OVER (ORDER BY avg_daily_steps DESC)          AS steps_rank,
+      avg_exercise_hours,
+      avg_bp_systolic,
+      avg_bp_diastolic,
+      avg_sleep_hours,
+      avg_stress_score,
+      avg_ig_minutes_day
+  FROM aggregated
+  ORDER BY session_habit
+""").show(truncate=False)
+
+
+
+
+print("  CAU 3")
+
+
+spark.sql("""
+  WITH privacy_stats AS (
+      SELECT
+          privacy_setting_level,
+          gender,
+          COUNT(*)                                                          AS total_users,
+          ROUND(AVG(dms_sent_per_week), 2)                                 AS avg_dms_sent,
+          ROUND(AVG(dms_received_per_week), 2)                             AS avg_dms_received,
+          ROUND(AVG(comments_written_per_day), 2)                          AS avg_comments,
+          ROUND(AVG(likes_given_per_day), 2)                               AS avg_likes,
+          ROUND(AVG(stories_viewed_per_day), 1)                            AS avg_stories_viewed,
+          ROUND(
+              AVG(dms_sent_per_week) / NULLIF(AVG(comments_written_per_day), 0)
+          , 2)                                                             AS dm_vs_comment_ratio,
+          ROUND(AVG(followers_count), 0)                                   AS avg_followers,
+          ROUND(AVG(user_engagement_score), 4)                             AS avg_engagement
+      FROM instagram_cleaned_view
+      GROUP BY privacy_setting_level, gender
+  )
+  SELECT
+      privacy_setting_level,
+      gender,
+      total_users,
+      avg_dms_sent,
+      avg_dms_received,
+      avg_comments,
+      avg_likes,
+      avg_stories_viewed,
+      dm_vs_comment_ratio,
+      RANK() OVER (
+          PARTITION BY gender
+          ORDER BY dm_vs_comment_ratio DESC
+      )                                                                     AS privacy_rank_by_gender,
+      avg_followers,
+      avg_engagement
+  FROM privacy_stats
+  ORDER BY privacy_setting_level, gender
+""").show(20, truncate=False)
+
+
 print("  CAU 7")
 
 spark.sql("""
