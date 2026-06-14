@@ -28,9 +28,8 @@ plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.
 warnings.filterwarnings('ignore')
 
 if __name__ == '__main__':
-   # =========================================================================
+
    # 1. KHỞI TẠO SPARKSESSION
-   # =========================================================================
    print("--- Bước 1: Đang khởi tạo Apache Spark Session kết nối vào cụm Cluster... ---")
    spark = SparkSession.builder \
        .appName("Nhom04_SparkML_StressPrediction") \
@@ -47,10 +46,7 @@ if __name__ == '__main__':
    spark.sparkContext.setLogLevel("WARN")
    print(" Đã kết nối Master SparkSession phân tán thành công!\n")
 
-
-   # =========================================================================
    # 2. NẠP DỮ LIỆU TỪ HDFS & ÉP KIỂU
-   # =========================================================================
    INPUT_HDFS_PATH = "hdfs://26.142.182.248:9000/BigData_Nhom04/instagram_cleaned"
 
 
@@ -66,11 +62,8 @@ if __name__ == '__main__':
    input_categorical_cols = ['employment_status', 'urban_rural']
    target_col = 'perceived_stress_score'
 
-
-   # Ép kiểu thủ công về double (do inferSchema=False)
    for c in (input_numeric_cols + [target_col]):
        df = df.withColumn(c, col(c).cast("double"))
-
 
    df.cache()
    total_rows = df.count()
@@ -78,7 +71,6 @@ if __name__ == '__main__':
 
    # =========================================================================
    # 3. EDA & HEATMAP TƯƠNG QUAN (Trực quan hóa trên mẫu ban đầu)
-   # =========================================================================
    print("\n--- Bước 3: Đang thực hiện phân tích EDA và vẽ Heatmap tương quan... ---")
    sample_ratio = min(10000.0 / total_rows, 1.0)
    eda_sample_pd = df.select(input_numeric_cols + [target_col]) \
@@ -106,14 +98,12 @@ if __name__ == '__main__':
    # =========================================================================
    # 4. CHIA DỮ LIỆU TRAIN/TEST
    # =========================================================================
+   # 4. CHIA DỮ LIỆU TRAIN/TEST (Tránh Data Leakage)
    print("\n--- Bước 4: Đang phân tách dữ liệu Train/Test... ---")
    train_data, test_data = df.randomSplit([0.7, 0.3], seed=42)
    print(f" Đã phân tách: Train (70%) = {train_data.count():,} | Test (30%) = {test_data.count():,} dòng.")
 
-
-   # =========================================================================
    # 5. XỬ LÝ KHUYẾT THIẾU & FEATURE ENGINEERING (Dựa trên Train Data)
-   # =========================================================================
    print("\n--- Bước 5: Xử lý khuyết thiếu và Kỹ nghệ đặc trưng... ---")
    # 5.1. Imputation (Chỉ lấy Mean từ TẬP TRAIN)
    mean_dict = train_data.select([mean(c).alias(c) for c in input_numeric_cols + [target_col]]).first().asDict()
@@ -151,7 +141,6 @@ if __name__ == '__main__':
 
    # =========================================================================
    # 6. PIPELINE MÃ HÓA BIẾN CHỮ & CHUẨN HÓA DỮ LIỆU TOÀN DIỆN
-   # =========================================================================
    print("\n--- Bước 6: Thiết lập Pipeline mã hóa và Standard Scaler... ---")
    stages = []
    encoded_categorical_cols = []
@@ -179,7 +168,6 @@ if __name__ == '__main__':
 
    # =========================================================================
    # 7. ĐÀO TẠO 7 THUẬT TOÁN HỒI QUY
-   # =========================================================================
    print("\n --- Bước 7: Tiến hành huấn luyện 7 thuật toán Hồi quy riêng lẻ... ---")
 
    # Thuật toán 1: Linear Regression (Spark phân tán)
@@ -250,10 +238,7 @@ if __name__ == '__main__':
    lgb_reg.fit(X_train, y_train)
    lgb_preds_np = lgb_reg.predict(X_test)
 
-
-   # =========================================================================
    # 8. ĐÁNH GIÁ 7 MÔ HÌNH (RMSE, MAE, MAPE, R²)
-   # =========================================================================
    print("\n--- Bước 8: Đánh giá hiệu suất 7 mô hình (RMSE, MAE, MAPE, R²)... ---")
    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
@@ -264,16 +249,12 @@ if __name__ == '__main__':
        return np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
 
 
-
-
    def calc_metrics(y_true, y_pred):
        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
        mae = mean_absolute_error(y_true, y_pred)
        mape_val = mape(y_true, y_pred)
        r2 = r2_score(y_true, y_pred)
        return rmse, mae, mape_val, r2
-
-
 
 
    lr_rmse, lr_mae, lr_mape, lr_r2 = calc_metrics(y_test, lr_preds_pd)
@@ -329,9 +310,7 @@ if __name__ == '__main__':
    print(" Đã lưu biểu đồ so sánh mô hình.")
 
 
-   # =========================================================================
    # 9. GIẢI THÍCH MÔ HÌNH BẰNG SHAP (LightGBM)
-   # =========================================================================
    print("\n--- Bước 9: Đang tính toán giá trị SHAP (dùng LightGBM)... ---")
    n_shap = 500 if len(X_test) >= 500 else len(X_test)
    shap_sample = X_test.sample(n=n_shap, random_state=42)
