@@ -118,7 +118,8 @@ python Nhom04_04_SparkML_Model_2.py
 **Bài toán 1 — KMeans Clustering (Unsupervised)**
 - Phân cụm 4 nhóm người dùng dựa trên 15 đặc trưng hành vi
 - Pipeline: VectorAssembler → StandardScaler → KMeans
-- Đánh giá: Elbow Method + Silhouette Score = 0.63
+- Tìm số cụm tối ưu bằng Elbow Method
+- Biểu đồ trực quan hóa: Scatter Plot, Radar Chart
 
 **Bài toán 2 — Hồi quy dự đoán điểm Stress (Supervised)**
 - Dự đoán `perceived_stress_score` (thang 0–40)
