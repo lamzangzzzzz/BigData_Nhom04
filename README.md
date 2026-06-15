@@ -1,4 +1,4 @@
-# BigData_Nhom04 — Ứng dụng Apache Spark Phân tích Hành vi Người dùng Instagram
+# BigData_Nhom04 — Ứng dụng Apache Spark và Apache Hadoop Phân tích Hành vi Người dùng Instagram
 
 > Đồ án môn **Dữ liệu Lớn và Ứng dụng** — Nhóm 04  
 > Khoa CNTT Kinh doanh, Trường Công nghệ và Thiết kế, **ĐH UEH**  
