@@ -10,7 +10,7 @@
 
 | Họ tên | Vai trò | Node |
 |---|---|---|
-| Lâm Quỳnh Giang | Trưởng nhóm | Master Node |
+| Lâm Quỳnh Giang | Trưởng nhóm | Master |
 | Nguyễn Thanh Xinh | Thành viên | Worker 1 |
 | Lê Đoan Thy | Thành viên | Worker 2 |
 
