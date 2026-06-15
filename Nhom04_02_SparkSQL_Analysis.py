@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-# KHOI TAO SPARKSESSION
+# KHỞI TẠO SPARK SESSION
 spark = SparkSession.builder \
     .appName("Nhom04_SparkSQL") \
     .config("spark.executor.memory", "4g") \
@@ -9,7 +9,7 @@ spark = SparkSession.builder \
 
 spark.sparkContext.setLogLevel("WARN")
 
-# DOC DU LIEU SACH TU HDFS
+# ĐỌC DỮ LIỆU TỪ HDFS
 INPUT_HDFS_PATH = "hdfs://26.142.182.248:9000/BigData_Nhom04/instagram_cleaned"
 
 print("\n[INIT] Dang doc du lieu sach tu HDFS...")
